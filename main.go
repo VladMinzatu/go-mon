@@ -1,14 +1,45 @@
 package main
 
 import (
+	"log"
 	"log/slog"
 	"net/http"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+const pingPeriod = 1 * time.Second
+
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
-	})
+	http.HandleFunc("/ws", serveWs) // test with: websocat ws://localhost:8080/ws
 	slog.Info("Starting server on port :8080")
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func serveWs(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		slog.Error("Error upgrading connection:", "error", err)
+		return
+	}
+	defer ws.Close()
+
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := ws.WriteMessage(websocket.TextMessage, []byte(time.Now().Format(time.RFC3339))); err != nil {
+				slog.Error("Error writing message:", "error", err.Error())
+				return
+			}
+		}
+	}
 }
