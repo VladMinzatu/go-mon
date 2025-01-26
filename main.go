@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"html/template"
 	"log"
 	"log/slog"
@@ -45,10 +46,27 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-ticker.C:
-			if err := ws.WriteMessage(websocket.TextMessage, []byte(time.Now().Format(time.RFC3339))); err != nil {
+			jsonBytes := getMetricsJson()
+			if err := ws.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
 				slog.Error("Error writing message:", "error", err.Error())
 				return
 			}
 		}
 	}
+}
+
+func getMetricsJson() []byte {
+	metrics, err := GetSystemMetrics()
+	if err != nil {
+		slog.Error("Error getting system metrics:", "error", err.Error())
+		jsonBytes, _ := json.Marshal(map[string]string{"error": err.Error()})
+		return jsonBytes
+	}
+	jsonBytes, err := json.Marshal(metrics)
+	if err != nil {
+		slog.Error("Error marshaling metrics:", "error", err.Error())
+		jsonBytes, _ := json.Marshal(map[string]string{"error": err.Error()})
+		return jsonBytes
+	}
+	return jsonBytes
 }
