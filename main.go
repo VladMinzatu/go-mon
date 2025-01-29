@@ -40,33 +40,50 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	ticker := time.NewTicker(pingPeriod)
-	defer ticker.Stop()
+	mon := NewSystemMonitor(1 * time.Second)
+	defer mon.Stop()
 
+	connClosed := launchConnectionClosedListener(ws)
+	metricsChan := mon.Start(NewMetricsProvider())
 	for {
 		select {
-		case <-ticker.C:
-			jsonBytes := getMetricsJson()
+		case m := <-metricsChan:
+			jsonBytes := toJson(m)
 			if err := ws.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
 				slog.Error("Error writing message:", "error", err.Error())
 				return
 			}
+		case <-connClosed:
+			// Client closed connection
+			slog.Info("Client disconnected")
+			return
 		}
 	}
 }
 
-func getMetricsJson() []byte {
-	metrics, err := GetSystemMetrics()
-	if err != nil {
-		slog.Error("Error getting system metrics:", "error", err.Error())
-		jsonBytes, _ := json.Marshal(map[string]string{"error": err.Error()})
-		return jsonBytes
-	}
-	jsonBytes, err := json.Marshal(metrics)
+func toJson(metrics *SystemMetrics) []byte {
+	jsonBytes, err := json.Marshal(*metrics)
 	if err != nil {
 		slog.Error("Error marshaling metrics:", "error", err.Error())
 		jsonBytes, _ := json.Marshal(map[string]string{"error": err.Error()})
 		return jsonBytes
 	}
 	return jsonBytes
+}
+
+func launchConnectionClosedListener(ws *websocket.Conn) <-chan struct{} {
+	connClosed := make(chan struct{})
+	// check for client disconnects
+	go func() {
+		defer close(connClosed)
+		for {
+			if _, _, err := ws.ReadMessage(); err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					slog.Error("Read error:", "error", err)
+				}
+				return
+			}
+		}
+	}()
+	return connClosed
 }
