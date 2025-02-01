@@ -1,33 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="widt=device-widt; initial-scale=1" />
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.1/dist/ext/ws.js"></script>
-  </head>
-  <body>
-    <h1>System Metrics</h1>
-
-    <div style="display: flex; justify-content: space-around;">
-      <div style="flex: 1;">
-        <h2>CPU Usage</h2>
-        {{range $index, $usage := .CPUUsagePerCore}}
-        <div style="border: 1px solid #ccc; margin: 10px; padding: 10px; text-align: center;">
-          Core {{$index}}: {{printf "%.1f" $usage}}%
-        </div>
-        {{end}}
-      </div>
-
-      <div style="flex: 1;">
-        <h2>Memory Stats</h2>
-        <div style="border: 1px solid #ccc; margin: 10px; padding: 10px;">
-          <div>Total: {{printf "%.2f" (toGB .TotalMemory)}} GB</div>
-          <div>Used: {{printf "%.2f" (toGB .UsedMemory)}} GB</div>
-          <div>Free: {{printf "%.2f" (toGB .FreeMemory)}} GB</div>
-          <div>Usage: {{printf "%.1f" .MemoryUsage}}%</div>
-        </div>
-      </div>
+<head>
+    <meta charset="UTF-8">
+    <title>htmx WebSocket Test</title>
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+</head>
+<body>
+    <div hx-ext="ws" ws-connect="ws://localhost:8080/ws">
+        <div id="metrics">Loading...</div>
     </div>
-  </body>
+</body>
 </html>

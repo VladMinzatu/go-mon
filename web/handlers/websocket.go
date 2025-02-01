@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
+	"bytes"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"time"
@@ -14,6 +15,14 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
+
+var funcMap = template.FuncMap{
+	"toGB": func(bytes uint64) float64 {
+		return float64(bytes) / (1024 * 1024 * 1024)
+	},
+}
+
+var statsTmpl = template.Must(template.New("system_monitor.html").Funcs(funcMap).ParseFiles("web/views/system_monitor.html"))
 
 func ServeWs(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
@@ -31,7 +40,7 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case m := <-metricsChan:
-			jsonBytes := toJson(m)
+			jsonBytes := toHtml(m)
 			if err := ws.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
 				slog.Error("Error writing message:", "error", err.Error())
 				return
@@ -44,14 +53,13 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func toJson(metrics *monitor.SystemMetrics) []byte {
-	jsonBytes, err := json.Marshal(*metrics)
-	if err != nil {
-		slog.Error("Error marshaling metrics:", "error", err.Error())
-		jsonBytes, _ := json.Marshal(map[string]string{"error": err.Error()})
-		return jsonBytes
+func toHtml(metrics *monitor.SystemMetrics) []byte {
+	var buf bytes.Buffer
+	if err := statsTmpl.Execute(&buf, metrics); err != nil {
+		slog.Error("Error executing template:", "error", err.Error())
+		return []byte(err.Error())
 	}
-	return jsonBytes
+	return buf.Bytes()
 }
 
 func launchConnectionClosedListener(ws *websocket.Conn) <-chan struct{} {
