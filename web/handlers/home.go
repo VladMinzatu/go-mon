@@ -13,7 +13,7 @@ var funcMap = template.FuncMap{
 	},
 }
 
-var tmpl = template.Must(template.New("index.html").Funcs(template.FuncMap(funcMap)).ParseFiles("index.html"))
+var tmpl = template.Must(template.New("index.html").Funcs(template.FuncMap(funcMap)).ParseFiles("web/views/index.html"))
 
 func ServeHomepage(w http.ResponseWriter, r *http.Request) {
 	stats := monitor.SystemStats{
