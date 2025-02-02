@@ -36,6 +36,8 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	defer mon.Stop()
 
 	connClosed := launchConnectionClosedListener(ws)
+	// TODO: in a more realistic scenario, we would not get system stats repeatedly on behalf of every client
+	// instead, they should be queried from a struct that manages the current state and updates it and closes gracefully on server shutdown.
 	metricsChan := mon.Start(monitor.NewMetricsProvider())
 	for {
 		select {
@@ -72,7 +74,7 @@ func launchConnectionClosedListener(ws *websocket.Conn) <-chan struct{} {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					slog.Error("Connection closed unexpectedly:", "error", err)
 				}
-				return
+				return // connection closed in a normal way. No cause for concern and we can now stop trying to send updates
 			}
 		}
 	}()
