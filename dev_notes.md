@@ -17,13 +17,21 @@ mv tailwindcss-macos-arm64 tailwindcss
 **Side note here**: there is no more `./tailwindcss init` command and the `tailwind.config.js` file is no longer needed.
 The binary will use sensible paths to scan for html files. However, the `tailwind.config.js` file can always be created manually if needed (e.g. to specify a content that includes non-'\*html' templates, like templ)
 
-Step 2: And now we can start a watcher to keep our `./public/styles.css` updated:
+Step 2: In our `./web/views/css/styles.css` we write:
+
+```
+@import "tailwindcss";
+```
+
+Step 3: And now we can start a watcher to keep our `./public/styles.css` updated:
 
 ```
 ./tailwindcss -i ./web/views/css/styles.css -o ./public/styles.css --watch
 ```
 
-Step 3: For production, compile and minify the CSS file:
+**Note**: Don't forget that our server has to serve `/public/*`.
+
+Step 4: For production, compile and minify the CSS file:
 
 ```
 ./tailwindcss -i ./web/views/css/styles.css -o ./public/styles.css --minify
