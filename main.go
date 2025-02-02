@@ -11,6 +11,7 @@ import (
 func main() {
 	http.HandleFunc("/", handlers.ServeHomepage)
 	http.HandleFunc("/ws", handlers.ServeWs) // test with: websocat ws://localhost:8080/ws
+	http.Handle("/public/", http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
 	slog.Info("Starting server on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
