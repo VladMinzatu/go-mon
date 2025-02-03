@@ -81,7 +81,7 @@ func (mp *DefaultSystemMetricsProvider) GetSystemMetrics() (*SystemMetrics, erro
 		CPUUsagePerCore: cpuPercentages,
 		TotalMemory:     memStats.Total,
 		UsedMemory:      memStats.Used,
-		FreeMemory:      memStats.Free,
+		FreeMemory:      memStats.Available,
 		MemoryUsage:     memStats.UsedPercent,
 	}, nil
 }
