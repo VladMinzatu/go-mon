@@ -4,6 +4,8 @@ System resources monitor app implemented with Go+HTMX+TailwindCSS and websockets
 
 ![Screenshot](./demo/screenshot.png)
 
+_Disclaimer: The styling is AI generated. I am no Tailwind guru yet._
+
 ## Running locally
 
 ```
