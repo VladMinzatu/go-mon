@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"log/slog"
 	"sync"
 )
 
@@ -23,6 +24,7 @@ func NewSystemMonitorService(monitor systemMonitor) *SystemMonitorService {
 }
 
 func (s *SystemMonitorService) Start() {
+	slog.Info("SystemMonitorService starting")
 	metricsChan := s.monitor.Start()
 
 	go func() {
@@ -33,6 +35,7 @@ func (s *SystemMonitorService) Start() {
 }
 
 func (s *SystemMonitorService) Stop() {
+	slog.Info("SystemMonitorService was stopped. Closing all subscriber channels and stopping the monitor.")
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

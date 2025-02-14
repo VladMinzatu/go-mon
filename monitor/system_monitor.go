@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -28,6 +29,7 @@ func NewSystemMonitor(provider SystemMetricsProvider, interval time.Duration) *S
 }
 
 func (m *SystemMonitor) Start() <-chan *SystemMetrics {
+	slog.Info("Starting SystemMonitor", "interval", m.interval.String(), "message", "Will compute and publish system metrics at regular intervals")
 	go func() {
 		ticker := time.NewTicker(m.interval)
 		defer ticker.Stop()
@@ -36,10 +38,12 @@ func (m *SystemMonitor) Start() <-chan *SystemMetrics {
 		for {
 			select {
 			case <-m.done:
+				slog.Info("SystemMonitor was stopped. Closing the metrics channel.")
 				return
 			case <-ticker.C:
 				metrics, err := m.provider.GetSystemMetrics()
 				if err != nil {
+					slog.Error("Failed to get system metrics. Cannot publish updates.", "error", err)
 					continue // Skip this interval if there's an error
 				}
 				m.metrics <- metrics
@@ -69,13 +73,15 @@ type SystemMetrics struct {
 }
 
 func (mp *DefaultSystemMetricsProvider) GetSystemMetrics() (*SystemMetrics, error) {
-	cpuPercentages, err := cpu.Percent(time.Second, true) // true = per CPU core
+	cpuPercentages, err := cpu.Percent(time.Second, true) // true means "per CPU core"
 	if err != nil {
+		// no log - handle errors only once, and propagating is handling
 		return nil, err
 	}
 
 	memStats, err := mem.VirtualMemory()
 	if err != nil {
+		// no log - handle errors only once, and propagating is handling
 		return nil, err
 	}
 
