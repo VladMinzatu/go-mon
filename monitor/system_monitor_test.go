@@ -36,8 +36,8 @@ func TestSystemMonitor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			monitor := NewSystemMonitor(monitorPeriod)
-			metricsChan := monitor.Start(&testMetricsProvider{})
+			monitor := NewSystemMonitor(&testMetricsProvider{}, monitorPeriod)
+			metricsChan := monitor.Start()
 
 			receivedCount := 0
 			timeout := time.After(monitorPeriod * time.Duration(tt.intervalCount+1))

@@ -32,13 +32,15 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	mon := monitor.NewSystemMonitor(1 * time.Second)
+	// TODO: Move init outside and use singleton
+	mon :=
+		monitor.NewSystemMonitorService(monitor.NewSystemMonitor(&monitor.DefaultSystemMetricsProvider{}, 1*time.Second))
+	mon.Start()
 	defer mon.Stop()
 
 	connClosed := launchConnectionClosedListener(ws)
-	// TODO: in a more realistic scenario, we would not get system stats repeatedly on behalf of every client
-	// instead, they should be queried from a struct that manages the current state and updates it and closes gracefully on server shutdown.
-	metricsChan := mon.Start(monitor.NewMetricsProvider())
+	metricsChan := mon.Subscribe()
+	defer mon.Unsubscribe(metricsChan)
 	for {
 		select {
 		case m := <-metricsChan:

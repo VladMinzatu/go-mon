@@ -7,25 +7,27 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
+type SystemMetricsProvider interface {
+	GetSystemMetrics() (*SystemMetrics, error)
+}
+
 type SystemMonitor struct {
+	provider SystemMetricsProvider
 	interval time.Duration
 	metrics  chan *SystemMetrics
 	done     chan struct{}
 }
 
-func NewSystemMonitor(interval time.Duration) *SystemMonitor {
+func NewSystemMonitor(provider SystemMetricsProvider, interval time.Duration) *SystemMonitor {
 	return &SystemMonitor{
+		provider: provider,
 		interval: interval,
 		metrics:  make(chan *SystemMetrics),
 		done:     make(chan struct{}),
 	}
 }
 
-type SystemMetricsProvider interface {
-	GetSystemMetrics() (*SystemMetrics, error)
-}
-
-func (m *SystemMonitor) Start(provider SystemMetricsProvider) <-chan *SystemMetrics {
+func (m *SystemMonitor) Start() <-chan *SystemMetrics {
 	go func() {
 		ticker := time.NewTicker(m.interval)
 		defer ticker.Stop()
@@ -36,7 +38,7 @@ func (m *SystemMonitor) Start(provider SystemMetricsProvider) <-chan *SystemMetr
 			case <-m.done:
 				return
 			case <-ticker.C:
-				metrics, err := provider.GetSystemMetrics()
+				metrics, err := m.provider.GetSystemMetrics()
 				if err != nil {
 					continue // Skip this interval if there's an error
 				}
