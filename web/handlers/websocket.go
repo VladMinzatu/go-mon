@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/VladMinzatu/go-mon/monitor"
 	"github.com/gorilla/websocket"
@@ -24,7 +23,17 @@ var funcMap = template.FuncMap{
 
 var statsTmpl = template.Must(template.New("system_monitor.html").Funcs(funcMap).ParseFiles("web/views/system_monitor.html"))
 
-func ServeWs(w http.ResponseWriter, r *http.Request) {
+type WebSocketHandler struct {
+	systemMonitor *monitor.SystemMonitorService
+}
+
+func NewWebSocketHandler(systemMonitor *monitor.SystemMonitorService) *WebSocketHandler {
+	return &WebSocketHandler{
+		systemMonitor: systemMonitor,
+	}
+}
+
+func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("Error upgrading connection:", "error", err)
@@ -32,15 +41,9 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	// TODO: Move init outside and use singleton
-	mon :=
-		monitor.NewSystemMonitorService(monitor.NewSystemMonitor(&monitor.DefaultSystemMetricsProvider{}, 1*time.Second))
-	mon.Start()
-	defer mon.Stop()
-
 	connClosed := launchConnectionClosedListener(ws)
-	metricsChan := mon.Subscribe()
-	defer mon.Unsubscribe(metricsChan)
+	metricsChan := h.systemMonitor.Subscribe()
+	defer h.systemMonitor.Unsubscribe(metricsChan)
 	for {
 		select {
 		case m := <-metricsChan:

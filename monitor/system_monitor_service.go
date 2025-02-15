@@ -24,7 +24,6 @@ func NewSystemMonitorService(monitor systemMonitor) *SystemMonitorService {
 }
 
 func (s *SystemMonitorService) Start() {
-	slog.Info("SystemMonitorService starting")
 	metricsChan := s.monitor.Start()
 
 	go func() {
