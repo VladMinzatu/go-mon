@@ -51,10 +51,12 @@ func (s *SystemMonitorService) Subscribe() chan *SystemMetrics {
 
 	ch := make(chan *SystemMetrics, 1) // Buffer of 1 to prevent blocking on write
 	s.subscribers[ch] = struct{}{}
+	slog.Debug("New subscriber registered")
 	return ch
 }
 
 func (s *SystemMonitorService) Unsubscribe(ch chan *SystemMetrics) {
+	slog.Debug("Unsubscribing a subscriber")
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

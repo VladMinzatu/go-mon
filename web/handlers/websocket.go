@@ -54,7 +54,7 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		case <-connClosed:
 			// Client closed connection
-			slog.Info("Client disconnected")
+			slog.Debug("Client disconnected")
 			return
 		}
 	}
