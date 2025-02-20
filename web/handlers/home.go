@@ -5,12 +5,18 @@ import (
 	"net/http"
 )
 
-var homeTmpl = template.Must(template.New("index.html").ParseFiles("web/views/index.html"))
+type HomepageHandler struct {
+	template *template.Template
+}
 
-type HomepageHandler struct{}
+func NewHomepageHandler(tmpl *template.Template) *HomepageHandler {
+	return &HomepageHandler{
+		template: tmpl,
+	}
+}
 
 func (h *HomepageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := homeTmpl.Execute(w, nil)
+	err := h.template.Execute(w, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

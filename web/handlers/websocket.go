@@ -10,31 +10,30 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+type systemMonitorService interface {
+	Subscribe() chan *monitor.SystemMetrics
+	Unsubscribe(chan *monitor.SystemMetrics)
 }
-
-var funcMap = template.FuncMap{
-	"toGB": func(bytes uint64) float64 {
-		return float64(bytes) / (1024 * 1024 * 1024)
-	},
-}
-
-var statsTmpl = template.Must(template.New("system_monitor.html").Funcs(funcMap).ParseFiles("web/views/system_monitor.html"))
 
 type WebSocketHandler struct {
-	systemMonitor *monitor.SystemMonitorService
+	upgrader      websocket.Upgrader
+	systemMonitor systemMonitorService
+	template      *template.Template
 }
 
-func NewWebSocketHandler(systemMonitor *monitor.SystemMonitorService) *WebSocketHandler {
+func NewWebSocketHandler(systemMonitor systemMonitorService, tmpl *template.Template) *WebSocketHandler {
 	return &WebSocketHandler{
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		},
 		systemMonitor: systemMonitor,
+		template:      tmpl,
 	}
 }
 
 func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
+	ws, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("Error upgrading connection:", "error", err)
 		return
@@ -47,7 +46,7 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case m := <-metricsChan:
-			jsonBytes := toHtml(m)
+			jsonBytes := toHtml(m, h.template)
 			if err := ws.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
 				slog.Error("Error writing message:", "error", err.Error())
 				return
@@ -60,9 +59,9 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func toHtml(metrics *monitor.SystemMetrics) []byte {
+func toHtml(metrics *monitor.SystemMetrics, tmpl *template.Template) []byte {
 	var buf bytes.Buffer
-	if err := statsTmpl.Execute(&buf, metrics); err != nil {
+	if err := tmpl.Execute(&buf, metrics); err != nil {
 		slog.Error("Error executing template:", "error", err.Error())
 		return []byte(err.Error())
 	}
