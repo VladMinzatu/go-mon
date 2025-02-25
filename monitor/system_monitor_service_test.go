@@ -110,4 +110,46 @@ func TestSystemMonitorService(t *testing.T) {
 		}
 		mock.mu.Unlock()
 	})
+
+	t.Run("new subscriber gets cached metrics immediately upon subscribing", func(t *testing.T) {
+		mock := newMockSystemMonitor()
+		service := NewSystemMonitorService(mock)
+		service.Start()
+
+		ch1 := service.Subscribe()
+		// Start a goroutine to receive from ch1 and verify it blocks
+		received := make(chan struct{})
+		go func() {
+			<-ch1 // This should block until we send metrics
+			close(received)
+		}()
+
+		// Verify channel is blocked
+		select {
+		case <-received:
+			t.Error("channel should block until metrics are sent")
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		// Now send metrics and verify it unblocks
+		mock.metricsChan <- mockMetrics
+
+		select {
+		case <-received:
+			// channel received metrics and unblocked, all good
+		case <-time.After(100 * time.Millisecond):
+			t.Error("channel should have received metrics and unblocked")
+		}
+
+		ch2 := service.Subscribe()
+		// Verify ch2 gets cached metrics immediately
+		select {
+		case metrics := <-ch2:
+			if metrics != mockMetrics {
+				t.Error("new subscriber should receive cached metrics immediately")
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Error("new subscriber should receive cached metrics without delay")
+		}
+	})
 }

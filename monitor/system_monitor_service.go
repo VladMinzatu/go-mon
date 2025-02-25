@@ -11,9 +11,10 @@ type systemMonitor interface {
 }
 
 type SystemMonitorService struct {
-	monitor     systemMonitor
-	subscribers map[chan *SystemMetrics]struct{}
-	mu          sync.RWMutex
+	monitor       systemMonitor
+	subscribers   map[chan *SystemMetrics]struct{}
+	mu            sync.RWMutex
+	latestMetrics *SystemMetrics
 }
 
 func NewSystemMonitorService(monitor systemMonitor) *SystemMonitorService {
@@ -28,6 +29,7 @@ func (s *SystemMonitorService) Start() {
 
 	go func() {
 		for metrics := range metricsChan {
+			s.latestMetrics = metrics
 			s.broadcast(metrics)
 		}
 	}()
@@ -50,6 +52,9 @@ func (s *SystemMonitorService) Subscribe() chan *SystemMetrics {
 	defer s.mu.Unlock()
 
 	ch := make(chan *SystemMetrics, 1) // Buffer of 1 to prevent blocking on write
+	if s.latestMetrics != nil {
+		ch <- s.latestMetrics // write the cached metrics so the subscriber gets their first update immediately
+	}
 	s.subscribers[ch] = struct{}{}
 	slog.Debug("New subscriber registered")
 	return ch
