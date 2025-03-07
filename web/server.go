@@ -6,6 +6,7 @@ import (
 
 	"github.com/VladMinzatu/go-mon/monitor"
 	"github.com/VladMinzatu/go-mon/web/handlers"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func NewServer(systemMonitor *monitor.SystemMonitorService) http.Handler {
@@ -27,4 +28,5 @@ func addRoutes(mux *http.ServeMux, systemMonitor *monitor.SystemMonitorService) 
 	mux.Handle("/", handlers.NewHomepageHandler(homeTmpl))
 	mux.Handle("/ws", handlers.NewWebSocketHandler(systemMonitor, statsTmpl)) // test with: websocat ws://localhost:8080/ws
 	mux.Handle("/public/", http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
+	mux.Handle("/metrics", promhttp.Handler())
 }
