@@ -40,7 +40,7 @@ func TestWebSocketHandler(t *testing.T) {
 	mockService := &mockSystemMonitorService{
 		metricsChan: make(chan *monitor.SystemMetrics),
 	}
-	handler, _ := NewWebSocketHandler(mockService, testTemplate)
+	handler := NewWebSocketHandler(mockService, testTemplate)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -84,7 +84,7 @@ func TestWebSocketHandlerUpgradeFailure(t *testing.T) {
 	mockService := &mockSystemMonitorService{
 		metricsChan: make(chan *monitor.SystemMetrics),
 	}
-	handler, _ := NewWebSocketHandler(mockService, testTemplate)
+	handler := NewWebSocketHandler(mockService, testTemplate)
 
 	// Create a regular HTTP request (not websocket)
 	req := httptest.NewRequest("GET", "/ws", nil)

@@ -18,11 +18,7 @@ func main() {
 		monitor.NewSystemMonitor(&monitor.DefaultSystemMetricsProvider{}, 1*time.Second))
 	systemMonitor.Start()
 
-	srv, err := web.NewServer(systemMonitor)
-	if err != nil {
-		slog.Error("Failed to initialise server up. Shutting down", "error", err.Error())
-		os.Exit(1)
-	}
+	srv := web.NewServer(systemMonitor)
 
 	httpServer := &http.Server{
 		Addr:    "localhost:8080",

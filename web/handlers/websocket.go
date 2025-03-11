@@ -2,24 +2,17 @@ package handlers
 
 import (
 	"bytes"
-	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
 
 	"github.com/VladMinzatu/go-mon/monitor"
 	"github.com/gorilla/websocket"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
 )
 
 const (
-	meterName = "connections"
-
-	counterNumClients = "num_clients"
+	numClientsCounterName = "num_clients"
 )
-
-var numClients metric.Int64UpDownCounter
 
 type systemMonitorService interface {
 	Subscribe() chan *monitor.SystemMetrics
@@ -32,13 +25,7 @@ type WebSocketHandler struct {
 	template      *template.Template
 }
 
-func NewWebSocketHandler(systemMonitor systemMonitorService, tmpl *template.Template) (*WebSocketHandler, error) {
-	var err error
-	numClients, err = otel.GetMeterProvider().Meter(meterName).Int64UpDownCounter(counterNumClients)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize client counter: %w", err)
-	}
-
+func NewWebSocketHandler(systemMonitor systemMonitorService, tmpl *template.Template) *WebSocketHandler {
 	return &WebSocketHandler{
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -46,11 +33,11 @@ func NewWebSocketHandler(systemMonitor systemMonitorService, tmpl *template.Temp
 		},
 		systemMonitor: systemMonitor,
 		template:      tmpl,
-	}, nil
+	}
 }
 
 func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	numClients.Add(r.Context(), 1)
+	numClientsCounter.Add(r.Context(), 1)
 	ws, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("Error upgrading connection:", "error", err)
@@ -67,13 +54,13 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			jsonBytes := toHtml(m, h.template)
 			if err := ws.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
 				slog.Error("Error writing message:", "error", err.Error())
-				numClients.Add(r.Context(), -1)
+				numClientsCounter.Add(r.Context(), -1)
 				return
 			}
 		case <-connClosed:
 			// Client closed connection
 			slog.Debug("Client disconnected")
-			numClients.Add(r.Context(), -1)
+			numClientsCounter.Add(r.Context(), -1)
 			return
 		}
 	}
