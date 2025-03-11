@@ -1,8 +1,7 @@
 package telemetry
 
 import (
-	"log/slog"
-	"os"
+	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -14,14 +13,19 @@ import (
 var (
 	MeterProvider *metric.MeterProvider
 	initOnce      sync.Once
+	initErr       error
+
+	// Sentinel errors for telemetry initialization and instrument creation failures
+	// In a prod setting, we may want to have dedicated alerts for these
+	ErrTelemetryInit    = fmt.Errorf("failed to initialize telemetry")
+	ErrInstrumentCreate = fmt.Errorf("failed to create telemetry instrument")
 )
 
 func InitMetrics() {
 	initOnce.Do(func() {
 		promExporter, err := prometheus.New()
 		if err != nil {
-			slog.Error("Failed to initialise server. Shutting down", "error", err.Error())
-			os.Exit(1)
+			initErr = ErrTelemetryInit
 		}
 
 		mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(promExporter))
@@ -29,7 +33,10 @@ func InitMetrics() {
 	})
 }
 
-func GetMeter(name string) metric.Meter {
+func GetMeter(name string) (metric.Meter, error) {
 	InitMetrics() // Ensure it's initialized before use
-	return otel.GetMeterProvider().Meter(name)
+	if initErr != nil {
+		return nil, initErr
+	}
+	return otel.GetMeterProvider().Meter(name), nil
 }

@@ -9,7 +9,7 @@ import (
 
 var (
 	// the package-level meter
-	meter = telemetry.GetMeter("github.com/VladMinzatu/go-mon/handlers")
+	meter, meterErr = telemetry.GetMeter("github.com/VladMinzatu/go-mon/handlers")
 
 	// WebSocket instruments
 	numClientsCounter metric.Int64UpDownCounter
@@ -18,7 +18,7 @@ var (
 )
 
 func init() {
-	var err error
+	var err = meterErr
 
 	// init WebSocket instruments
 	numClientsCounter, err = meter.Int64UpDownCounter("num_clients",
@@ -26,6 +26,6 @@ func init() {
 	)
 
 	if err != nil {
-		slog.Error("metrics initialization failed", "error", err)
+		slog.Error("metrics initialization failed", "error", telemetry.ErrInstrumentCreate, "cause", err)
 	}
 }
