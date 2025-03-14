@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/VladMinzatu/go-mon/monitor"
 	"github.com/gorilla/websocket"
@@ -43,7 +44,12 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		slog.Error("Error upgrading connection:", "error", err)
 		return
 	}
-	defer ws.Close()
+
+	start := time.Now()
+	defer func() {
+		ws.Close()
+		connectionDuration.Record(r.Context(), time.Since(start).Seconds())
+	}()
 
 	connClosed := launchConnectionClosedListener(ws)
 	metricsChan := h.systemMonitor.Subscribe()
