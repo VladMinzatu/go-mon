@@ -59,7 +59,7 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case m := <-metricsChan:
 			jsonBytes := toHtml(m, h.template)
 			if err := ws.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
-				slog.Error("Error writing message:", "error", err.Error())
+				slog.Error("Error writing message:", "error", err)
 				numClientsCounter.Add(r.Context(), -1)
 				return
 			}
@@ -75,7 +75,7 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func toHtml(metrics *monitor.SystemMetrics, tmpl *template.Template) []byte {
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, metrics); err != nil {
-		slog.Error("Error executing template:", "error", err.Error())
+		slog.Error("Error executing template:", "error", err)
 		return []byte(err.Error())
 	}
 	return buf.Bytes()

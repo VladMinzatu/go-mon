@@ -29,7 +29,7 @@ func NewSystemMonitor(provider SystemMetricsProvider, interval time.Duration) *S
 }
 
 func (m *SystemMonitor) Start() <-chan *SystemMetrics {
-	slog.Info("Starting SystemMonitor", "interval", m.interval.String(), "message", "Will compute and publish system metrics at regular intervals")
+	slog.Info("Starting SystemMonitor", slog.String("interval", m.interval.String()), slog.String("message", "Will compute and publish system metrics at regular intervals"))
 	go func() {
 		ticker := time.NewTicker(m.interval)
 		defer ticker.Stop()
